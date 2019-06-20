@@ -4,7 +4,6 @@ declare(strict_types=1);
 namespace LanguageServer\Server;
 
 use Amp\Deferred;
-use Amp\Delayed;
 use Amp\Loop;
 use Amp\Promise;
 use Amp\Success;
@@ -43,6 +42,11 @@ class Workspace
     /**
      * @var \stdClass
      */
+    public $composerJson;
+
+    /**
+     * @var \stdClass
+     */
     public $composerLock;
 
     /**
@@ -54,19 +58,20 @@ class Workspace
      * @param LanguageClient $client LanguageClient instance used to signal updated results
      * @param ProjectIndex $projectIndex Index that is used to wait for full index completeness
      * @param DependenciesIndex $dependenciesIndex Index that is used on a workspace/xreferences request
-     * @param DependenciesIndex $sourceIndex Index that is used on a workspace/xreferences request
-     * @param \stdClass $composerLock The parsed composer.lock of the project, if any
+     * @param Index $sourceIndex used on a workspace/xreferences request
      * @param PhpDocumentLoader $documentLoader PhpDocumentLoader instance to load documents
+     * @param \stdClass $composerJson The parsed composer.json of the project, if any
+     * @param \stdClass $composerLock The parsed composer.lock of the project, if any
      */
-    public function __construct(LanguageClient $client, ProjectIndex $projectIndex, DependenciesIndex $dependenciesIndex, Index $sourceIndex, \stdClass $composerLock = null, PhpDocumentLoader $documentLoader, \stdClass $composerJson = null)
+    public function __construct(LanguageClient $client, ProjectIndex $projectIndex, DependenciesIndex $dependenciesIndex, Index $sourceIndex, PhpDocumentLoader $documentLoader, \stdClass $composerJson = null, \stdClass $composerLock = null)
     {
         $this->client = $client;
         $this->sourceIndex = $sourceIndex;
         $this->projectIndex = $projectIndex;
         $this->dependenciesIndex = $dependenciesIndex;
-        $this->composerLock = $composerLock;
         $this->documentLoader = $documentLoader;
         $this->composerJson = $composerJson;
+        $this->composerLock = $composerLock;
     }
 
     /**

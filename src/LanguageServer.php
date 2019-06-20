@@ -264,9 +264,9 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
                     $this->projectIndex,
                     $dependenciesIndex,
                     $sourceIndex,
-                    $this->composerLock,
                     $this->documentLoader,
-                    $this->composerJson
+                    $this->composerJson,
+                    $this->composerLock
                 );
             }
 
