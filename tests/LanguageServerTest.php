@@ -46,7 +46,6 @@ class LanguageServerTest extends TestCase
             $serverCapabilities->signatureHelpProvider->triggerCharacters = ['(', ','];
             $serverCapabilities->xworkspaceReferencesProvider = true;
             $serverCapabilities->xdefinitionProvider = true;
-            $serverCapabilities->xdependenciesProvider = true;
 
             $this->assertEquals(new InitializeResult($serverCapabilities), $result);
         });

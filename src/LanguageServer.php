@@ -294,7 +294,6 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
             // Support global references
             $serverCapabilities->xworkspaceReferencesProvider = true;
             $serverCapabilities->xdefinitionProvider = true;
-            $serverCapabilities->xdependenciesProvider = true;
 
             $deferred->resolve(new InitializeResult($serverCapabilities));
         });
