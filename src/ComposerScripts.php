@@ -5,6 +5,7 @@ namespace LanguageServer;
 
 use Amp\Loop;
 use LanguageServer\ContentRetriever\FileSystemContentRetriever;
+use LanguageServer\FilesFinder\File;
 use LanguageServer\FilesFinder\FileSystemFilesFinder;
 use LanguageServer\Index\StubsIndex;
 use Microsoft\PhpParser;
@@ -42,10 +43,11 @@ class ComposerScripts
             if (!$stubsLocation) {
                 throw new \Exception('jetbrains/phpstorm-stubs package not found');
             }
+            /** @var File[] $files */
+            $files = yield from $finder->find("$stubsLocation/**/*.php");
 
-            $uris = yield from $finder->find("$stubsLocation/**/*.php");
-
-            foreach ($uris as $uri) {
+            foreach ($files as $file) {
+                $uri = $file->getUri();
                 echo "Parsing $uri\n";
                 $content = yield from $contentRetriever->retrieve($uri);
 
