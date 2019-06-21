@@ -219,7 +219,9 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
                     sortUrisLevelOrder($composerJsonFiles);
 
                     if (!empty($composerJsonFiles)) {
-                        $this->composerJson = json_decode(yield from $this->contentRetriever->retrieve($composerJsonFiles[0]));
+                        $this->composerJson = json_decode(
+                            yield from $this->contentRetriever->retrieve($composerJsonFiles[0]->getUri())
+                        );
                     }
                 }
 
@@ -229,7 +231,9 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
                     sortUrisLevelOrder($composerLockFiles);
 
                     if (!empty($composerLockFiles)) {
-                        $this->composerLock = json_decode(yield from $this->contentRetriever->retrieve($composerLockFiles[0]));
+                        $this->composerLock = json_decode(
+                            yield from $this->contentRetriever->retrieve($composerLockFiles[0]->getUri())
+                        );
                     }
                 }
 
