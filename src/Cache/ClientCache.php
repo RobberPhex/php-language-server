@@ -28,7 +28,7 @@ class ClientCache implements Cache
      * Gets a value from the cache
      *
      * @param string $key
-     * @return Promise <mixed>
+     * @return \Generator <mixed>
      */
     public function get(string $key): \Generator
     {
@@ -42,7 +42,7 @@ class ClientCache implements Cache
      *
      * @param string $key
      * @param mixed $value
-     * @return Promise
+     * @return \Generator
      */
     public function set(string $key, $value): \Generator
     {

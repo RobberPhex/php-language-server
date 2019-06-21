@@ -3,29 +3,25 @@ declare(strict_types = 1);
 
 namespace LanguageServer;
 
-use LanguageServer\Index\ReadableIndex;
+use Generator;
 use LanguageServer\Factory\CompletionItemFactory;
-use LanguageServerProtocol\{
-    TextEdit,
-    Range,
-    Position,
-    CompletionList,
+use LanguageServer\Index\ReadableIndex;
+use LanguageServerProtocol\{CompletionContext,
     CompletionItem,
     CompletionItemKind,
-    CompletionContext,
-    CompletionTriggerKind
-};
+    CompletionList,
+    CompletionTriggerKind,
+    Position,
+    Range,
+    TextEdit};
 use Microsoft\PhpParser;
 use Microsoft\PhpParser\Node;
-use Microsoft\PhpParser\ResolvedName;
-use Generator;
-use function LanguageServer\FqnUtilities\{
-    nameConcat,
+use Microsoft\PhpParser\Node\QualifiedName;
+use function LanguageServer\FqnUtilities\{nameConcat,
     nameGetFirstPart,
     nameGetParent,
     nameStartsWith,
-    nameWithoutFirstPart
-};
+    nameWithoutFirstPart};
 
 class CompletionProvider
 {

@@ -5,6 +5,7 @@ namespace LanguageServer\Index;
 
 use Ds\Set;
 use LanguageServer\Definition;
+use LanguageServer\FilesFinder\File;
 use League\Event\Emitter;
 
 /**
@@ -13,6 +14,10 @@ use League\Event\Emitter;
  */
 class Index extends Emitter implements ReadableIndex, \Serializable
 {
+    /**
+     * @var int[]
+     */
+    private $mtimes = [];
 
     /**
      * An associative array that maps splitted fully qualified symbol names
@@ -273,7 +278,8 @@ class Index extends Emitter implements ReadableIndex, \Serializable
             'definitions' => iterator_to_array($this->getDefinitions()),
             'references' => $this->references,
             'complete' => $this->complete,
-            'staticComplete' => $this->staticComplete
+            'staticComplete' => $this->staticComplete,
+            'mtimes' => $this->mtimes,
         ]);
     }
 
@@ -429,5 +435,19 @@ class Index extends Emitter implements ReadableIndex, \Serializable
         } else {
             $this->removeIndexedDefinition($level + 1, $parts, $storage[$part], $rootStorage);
         }
+    }
+
+    public function markIndexed(File $file)
+    {
+        $this->mtimes[$file->getUri()] = $file->getMtime();
+    }
+
+    /**
+     * @param $file File
+     * @return bool
+     */
+    public function needIndex($file): bool
+    {
+        return $this->mtimes[$file->getUri()] && $this->mtimes[$file->getUri()] < $file->getMtime();
     }
 }

@@ -3,7 +3,6 @@ declare(strict_types=1);
 
 namespace LanguageServer\FilesFinder;
 
-use Sabre\Event\Promise;
 
 /**
  * Interface for finding files in the workspace
@@ -15,7 +14,7 @@ interface FilesFinder
      * If the client does not support workspace/xfiles, it falls back to searching the file system directly.
      *
      * @param string $glob
-     * @return Promise <string[]>
+     * @return \Generator <File[]>
      */
     public function find(string $glob): \Generator;
 }

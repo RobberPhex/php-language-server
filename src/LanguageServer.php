@@ -12,7 +12,7 @@ use LanguageServer\Cache\{ClientCache, FileSystemCache};
 use LanguageServer\ContentRetriever\{ClientContentRetriever, ContentRetriever, FileSystemContentRetriever};
 use LanguageServer\Event\MessageEvent;
 use LanguageServer\FilesFinder\{ClientFilesFinder, FilesFinder, FileSystemFilesFinder};
-use LanguageServer\Index\{DependenciesIndex, GlobalIndex, Index, ProjectIndex, StubsIndex};
+use LanguageServer\Index\{GlobalIndex, Index, StubsIndex};
 use LanguageServerProtocol\{ClientCapabilities,
     CompletionOptions,
     InitializeResult,
@@ -92,9 +92,9 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
     protected $globalIndex;
 
     /**
-     * @var ProjectIndex
+     * @var Index
      */
-    protected $projectIndex;
+    protected $sourceIndex;
 
     /**
      * @var DefinitionResolver
@@ -189,19 +189,21 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
             } else {
                 $this->contentRetriever = new FileSystemContentRetriever;
             }
+            $cache = $capabilities->xcacheProvider ? new ClientCache($this->client) : new FileSystemCache;
 
-            $dependenciesIndex = new DependenciesIndex;
-            $sourceIndex = new Index;
-            $this->projectIndex = new ProjectIndex($sourceIndex, $dependenciesIndex, $this->composerJson);
+            $this->sourceIndex = unserialize(yield from $cache->get($rootPath));
+            if (!$this->sourceIndex) {
+                $this->sourceIndex = new Index();
+            }
             $stubsIndex = StubsIndex::read();
-            $this->globalIndex = new GlobalIndex($stubsIndex, $this->projectIndex);
+            $this->globalIndex = new GlobalIndex($stubsIndex, $this->sourceIndex);
 
             // The DefinitionResolver should look in stubs, the project source and dependencies
             $this->definitionResolver = new DefinitionResolver($this->globalIndex);
 
             $this->documentLoader = new PhpDocumentLoader(
                 $this->contentRetriever,
-                $this->projectIndex,
+                $this->sourceIndex,
                 $this->definitionResolver
             );
 
@@ -228,19 +230,14 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
                     }
                 }
 
-                $cache = $capabilities->xcacheProvider ? new ClientCache($this->client) : new FileSystemCache;
-
                 // Index in background
                 $indexer = new Indexer(
                     $this->filesFinder,
                     $rootPath,
                     $this->client,
                     $cache,
-                    $dependenciesIndex,
-                    $sourceIndex,
-                    $this->documentLoader,
-                    $this->composerLock,
-                    $this->composerJson
+                    $this->sourceIndex,
+                    $this->documentLoader
                 );
                 Loop::defer(function () use ($indexer) {
                     yield from $indexer->index();
@@ -254,19 +251,14 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
                     $this->definitionResolver,
                     $this->client,
                     $this->globalIndex,
-                    $this->composerJson,
-                    $this->composerLock
+                    $this->sourceIndex
                 );
             }
             if ($this->workspace === null) {
                 $this->workspace = new Server\Workspace(
                     $this->client,
-                    $this->projectIndex,
-                    $dependenciesIndex,
-                    $sourceIndex,
-                    $this->documentLoader,
-                    $this->composerJson,
-                    $this->composerLock
+                    $this->sourceIndex,
+                    $this->documentLoader
                 );
             }
 

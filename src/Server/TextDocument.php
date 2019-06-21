@@ -9,6 +9,9 @@ use Amp\Loop;
 use Amp\Promise;
 use LanguageServer\{CompletionProvider,
     DefinitionResolver,
+    FilesFinder\File,
+    Index\GlobalIndex,
+    Index\Index,
     LanguageClient,
     PhpDocument,
     PhpDocumentLoader,
@@ -30,6 +33,7 @@ use LanguageServerProtocol\{CompletionContext,
 use Microsoft\PhpParser\Node;
 use function LanguageServer\{getPackageName, isVendored};
 use function League\Uri\parse;
+use Webmozart\Glob\Glob;
 
 /**
  * Provides method handlers for all textDocument/* methods
@@ -69,39 +73,37 @@ class TextDocument
     protected $index;
 
     /**
-     * @var \stdClass|null
+     * @var Index
      */
-    protected $composerJson;
+    private $sourceIndex;
 
     /**
-     * @var \stdClass|null
+     * @var PhpDocumentLoader
      */
-    protected $composerLock;
+    private $documentLoader;
 
     /**
      * @param PhpDocumentLoader $documentLoader
      * @param DefinitionResolver $definitionResolver
      * @param LanguageClient $client
-     * @param ReadableIndex $index
-     * @param \stdClass $composerJson
-     * @param \stdClass $composerLock
+     * @param Index $index
+     * @param Index $sourceIndex
      */
     public function __construct(
         PhpDocumentLoader $documentLoader,
         DefinitionResolver $definitionResolver,
         LanguageClient $client,
         ReadableIndex $index,
-        \stdClass $composerJson = null,
-        \stdClass $composerLock = null
-    ) {
+        Index $sourceIndex
+    )
+    {
         $this->documentLoader = $documentLoader;
         $this->client = $client;
         $this->definitionResolver = $definitionResolver;
         $this->completionProvider = new CompletionProvider($this->definitionResolver, $index);
         $this->signatureHelpProvider = new SignatureHelpProvider($this->definitionResolver, $index, $documentLoader);
         $this->index = $index;
-        $this->composerJson = $composerJson;
-        $this->composerLock = $composerLock;
+        $this->sourceIndex = $sourceIndex;
     }
 
     /**
@@ -139,9 +141,8 @@ class TextDocument
     {
         Loop::defer(function () use ($textDocument) {
             $document = $this->documentLoader->open($textDocument->uri, $textDocument->text);
-            if (!isVendored($document, $this->composerJson)) {
-                yield from $this->client->textDocument->publishDiagnostics($textDocument->uri, $document->getDiagnostics());
-            }
+            //if (!isVendored($document, $this->composerJson)) {
+            yield from $this->client->textDocument->publishDiagnostics($textDocument->uri, $document->getDiagnostics());
         });
     }
 
@@ -158,6 +159,7 @@ class TextDocument
         Loop::defer(function () use ($deferred, $textDocument, $contentChanges) {
             $document = $this->documentLoader->get($textDocument->uri);
             $document->updateContent($contentChanges[0]->text);
+            $this->sourceIndex->markIndexed(new File($textDocument->uri, time()));
             yield from $this->client->textDocument->publishDiagnostics($textDocument->uri, $document->getDiagnostics());
             $deferred->resolve();
         });
@@ -188,7 +190,8 @@ class TextDocument
         ReferenceContext $context,
         TextDocumentIdentifier $textDocument,
         Position $position
-    ): Promise {
+    ): Promise
+    {
         $deferred = new Deferred();
         Loop::defer(function () use ($deferred, $textDocument, $position) {
             $document = yield from $this->documentLoader->getOrLoad($textDocument->uri);
@@ -385,63 +388,10 @@ class TextDocument
     {
         $deferred = new Deferred();
         Loop::defer(function () use ($deferred, $context, $position, $textDocument) {
+            $file = new File($textDocument->uri, 0);
             /** @var PhpDocument $document */
-            $document = yield from $this->documentLoader->getOrLoad($textDocument->uri);
+            $document = yield from $this->documentLoader->getOrLoad($file);
             $deferred->resolve($this->completionProvider->provideCompletion($document, $position, $context));
-        });
-        return $deferred->promise();
-    }
-
-    /**
-     * This method is the same as textDocument/definition, except that
-     *
-     * The method returns metadata about the definition (the same metadata that workspace/xreferences searches for).
-     * The concrete location to the definition (location field) is optional. This is useful because the language server
-     * might not be able to resolve a goto definition request to a concrete location (e.g. due to lack of dependencies)
-     * but still may know some information about it.
-     *
-     * @param TextDocumentIdentifier $textDocument The text document
-     * @param Position $position The position inside the text document
-     * @return Promise <SymbolLocationInformation[]>
-     */
-    public function xdefinition(TextDocumentIdentifier $textDocument, Position $position): Promise
-    {
-        $deferred = new Deferred();
-        Loop::defer(function () use ($deferred, $textDocument, $position) {
-            $document = yield $this->documentLoader->getOrLoad($textDocument->uri);
-            $node = $document->getNodeAtPosition($position);
-            if ($node === null) {
-                return [];
-            }
-            // Handle definition nodes
-            $fqn = DefinitionResolver::getDefinedFqn($node);
-            while (true) {
-                if ($fqn) {
-                    $def = $this->index->getDefinition($fqn);
-                } else {
-                    // Handle reference nodes
-                    $def = $this->definitionResolver->resolveReferenceNodeToDefinition($node);
-                }
-                // If no result was found and we are still indexing, try again after the index was updated
-                if ($def !== null || $this->index->isComplete()) {
-                    break;
-                }
-            }
-            if (
-                $def === null
-                || $def->symbolInformation === null
-                || parse($def->symbolInformation->location->uri)['scheme'] === 'phpstubs'
-            ) {
-                return [];
-            }
-            // if Definition is inside a dependency, use the package name
-            $packageName = getPackageName($def->symbolInformation->location->uri, $this->composerJson);
-            // else use the package name of the root package (if exists)
-            if (!$packageName && $this->composerJson !== null) {
-                $packageName = $this->composerJson->name;
-            }
-            $descriptor = new SymbolDescriptor($def->fqn, new PackageDescriptor($packageName));
-            $deferred->resolve([new SymbolLocationInformation($descriptor, $def->symbolInformation->location)]);
         });
         return $deferred->promise();
     }

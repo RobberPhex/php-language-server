@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace LanguageServer\Cache;
 
+use Amp\File;
+
 /**
  * Caches content on the file system
  */
@@ -11,7 +13,12 @@ class FileSystemCache implements Cache
     /**
      * @var string
      */
-    public $cacheDir;
+    private $cacheDir;
+
+    /**
+     * @var string
+     */
+    private $cacheVersion;
 
     public function __construct()
     {
@@ -22,6 +29,7 @@ class FileSystemCache implements Cache
         } else {
             $this->cacheDir = getenv('HOME') . '/.phpls/';
         }
+        $this->cacheVersion = 'v1';
     }
 
     /**
@@ -33,8 +41,8 @@ class FileSystemCache implements Cache
     public function get(string $key): \Generator
     {
         try {
-            $file = $this->cacheDir . urlencode($key);
-            $content = yield \Amp\File\get($file);
+            $path = $this->generatePath($key);
+            $content = yield File\get($path);
             return unserialize($content);
         } catch (\Exception $e) {
             return null;
@@ -50,14 +58,21 @@ class FileSystemCache implements Cache
      */
     public function set(string $key, $value): \Generator
     {
-        $file = $this->cacheDir . urlencode($key);
+        $file = $this->generatePath($key);
         $dir = dirname($file);
-        if (yield \Amp\File\isfile($dir)) {
-            yield \Amp\File\unlink($dir);
+        if (yield File\isfile($dir)) {
+            yield File\unlink($dir);
         }
-        if (!yield \Amp\File\exists($dir)) {
-            yield \Amp\File\mkdir($dir, 0777, true);
+        if (!yield File\exists($dir)) {
+            yield File\mkdir($dir, 0777, true);
         }
-        yield \Amp\File\put($file, serialize($value));
+        yield File\put($file, serialize($value));
+    }
+
+    private function generatePath(string $key): string
+    {
+        $key = hash('$key', $key);
+        $path = join(DIRECTORY_SEPARATOR, [$this->cacheDir, $this->cacheVersion, substr($key, 0, 2), $key]);
+        return $path;
     }
 }

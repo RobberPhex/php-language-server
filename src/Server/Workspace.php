@@ -23,31 +23,9 @@ class Workspace
     public $client;
 
     /**
-     * The symbol index for the workspace
-     *
-     * @var ProjectIndex
-     */
-    private $projectIndex;
-
-    /**
-     * @var DependenciesIndex
-     */
-    private $dependenciesIndex;
-
-    /**
      * @var Index
      */
     private $sourceIndex;
-
-    /**
-     * @var \stdClass
-     */
-    public $composerJson;
-
-    /**
-     * @var \stdClass
-     */
-    public $composerLock;
 
     /**
      * @var PhpDocumentLoader
@@ -56,22 +34,14 @@ class Workspace
 
     /**
      * @param LanguageClient $client LanguageClient instance used to signal updated results
-     * @param ProjectIndex $projectIndex Index that is used to wait for full index completeness
-     * @param DependenciesIndex $dependenciesIndex Index that is used on a workspace/xreferences request
      * @param Index $sourceIndex used on a workspace/xreferences request
      * @param PhpDocumentLoader $documentLoader PhpDocumentLoader instance to load documents
-     * @param \stdClass $composerJson The parsed composer.json of the project, if any
-     * @param \stdClass $composerLock The parsed composer.lock of the project, if any
      */
-    public function __construct(LanguageClient $client, ProjectIndex $projectIndex, DependenciesIndex $dependenciesIndex, Index $sourceIndex, PhpDocumentLoader $documentLoader, \stdClass $composerJson = null, \stdClass $composerLock = null)
+    public function __construct(LanguageClient $client, Index $sourceIndex, PhpDocumentLoader $documentLoader)
     {
         $this->client = $client;
         $this->sourceIndex = $sourceIndex;
-        $this->projectIndex = $projectIndex;
-        $this->dependenciesIndex = $dependenciesIndex;
         $this->documentLoader = $documentLoader;
-        $this->composerJson = $composerJson;
-        $this->composerLock = $composerLock;
     }
 
     /**

@@ -5,13 +5,17 @@ namespace LanguageServer\ContentRetriever;
 
 use LanguageServer\LanguageClient;
 use LanguageServerProtocol\{TextDocumentIdentifier, TextDocumentItem};
-use Sabre\Event\Promise;
 
 /**
  * Retrieves file content from the client through a textDocument/xcontent request
  */
 class ClientContentRetriever implements ContentRetriever
 {
+    /**
+     * @var LanguageClient
+     */
+    private $client;
+
     /**
      * @param LanguageClient $client
      */
@@ -24,7 +28,7 @@ class ClientContentRetriever implements ContentRetriever
      * Retrieves the content of a text document identified by the URI through a textDocument/xcontent request
      *
      * @param string $uri The URI of the document
-     * @return Promise <string> Resolved with the content as a string
+     * @return \Generator <string> Resolved with the content as a string
      */
     public function retrieve(string $uri): \Generator
     {

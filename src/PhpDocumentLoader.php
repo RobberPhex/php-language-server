@@ -4,6 +4,8 @@ declare(strict_types=1);
 namespace LanguageServer;
 
 use LanguageServer\ContentRetriever\ContentRetriever;
+use LanguageServer\FilesFinder\File;
+use LanguageServer\Index\Index;
 use LanguageServer\Index\ProjectIndex;
 use Microsoft\PhpParser;
 use Microsoft\PhpParser\Parser;
@@ -27,9 +29,9 @@ class PhpDocumentLoader
     public $contentRetriever;
 
     /**
-     * @var ProjectIndex
+     * @var Index
      */
-    private $projectIndex;
+    private $sourceIndex;
 
     /**
      * @var Parser
@@ -48,17 +50,18 @@ class PhpDocumentLoader
 
     /**
      * @param ContentRetriever $contentRetriever
-     * @param ProjectIndex $projectIndex
+     * @param Index $sourceIndex
      * @param DefinitionResolver $definitionResolver
      * @internal param ProjectIndex $project
      */
     public function __construct(
         ContentRetriever $contentRetriever,
-        ProjectIndex $projectIndex,
+        Index $sourceIndex,
         DefinitionResolver $definitionResolver
-    ) {
+    )
+    {
         $this->contentRetriever = $contentRetriever;
-        $this->projectIndex = $projectIndex;
+        $this->sourceIndex = $sourceIndex;
         $this->definitionResolver = $definitionResolver;
         $this->parser = new PhpParser\Parser();
         $this->docBlockFactory = DocBlockFactory::createInstance();
@@ -80,16 +83,17 @@ class PhpDocumentLoader
      * Returns the document indicated by uri.
      * If the document is not open, loads it.
      *
-     * @param string $uri
+     * @param File $file
      * @return \Generator <PhpDocument>
      * @throws ContentTooLargeException
      */
-    public function getOrLoad(string $uri): \Generator
+    public function getOrLoad(File $file): \Generator
     {
+        $uri = $file->getUri();
         if (isset($this->documents[$uri])) {
             return $this->documents[$uri];
         } else {
-            return yield from $this->load($uri);
+            return yield from $this->load($file);
         }
     }
 
@@ -98,25 +102,21 @@ class PhpDocumentLoader
      * If the client does not support textDocument/xcontent, tries to read the file from the file system.
      * The document is NOT added to the list of open documents, but definitions are registered.
      *
-     * @param string $uri
+     * @param File $file
      * @return \Generator <PhpDocument>
-     * @throws ContentTooLargeException
      */
-    public function load(string $uri): \Generator
+    public function load(File $file): \Generator
     {
-        $limit = 150000;
-        $content = yield from $this->contentRetriever->retrieve($uri);
-        $size = strlen($content);
-        if ($size > $limit) {
-            throw new ContentTooLargeException($uri, $size, $limit);
-        }
+        $uri = $file->getUri();
 
+        $content = yield from $this->contentRetriever->retrieve($uri);
         if (isset($this->documents[$uri])) {
             $document = $this->documents[$uri];
             $document->updateContent($content);
         } else {
             $document = $this->create($uri, $content);
         }
+        $this->sourceIndex->markIndexed($file);
         return $document;
     }
 
@@ -132,7 +132,7 @@ class PhpDocumentLoader
         return new PhpDocument(
             $uri,
             $content,
-            $this->projectIndex->getIndexForUri($uri),
+            $this->sourceIndex,
             $this->parser,
             $this->docBlockFactory,
             $this->definitionResolver
@@ -155,6 +155,7 @@ class PhpDocumentLoader
             $document = $this->create($uri, $content);
             $this->documents[$uri] = $document;
         }
+        $this->sourceIndex->markIndexed(new File($uri, time()));
         return $document;
     }
 

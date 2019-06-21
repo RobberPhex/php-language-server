@@ -1,5 +1,5 @@
 <?php
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace LanguageServer\Index;
 
@@ -14,18 +14,18 @@ class GlobalIndex extends AbstractAggregateIndex
     private $stubsIndex;
 
     /**
-     * @var ProjectIndex
+     * @var Index
      */
-    private $projectIndex;
+    private $sourceIndex;
 
     /**
-     * @param StubsIndex   $stubsIndex
-     * @param ProjectIndex $projectIndex
+     * @param StubsIndex $stubsIndex
+     * @param Index $sourceIndex
      */
-    public function __construct(StubsIndex $stubsIndex, ProjectIndex $projectIndex)
+    public function __construct(StubsIndex $stubsIndex, Index $sourceIndex)
     {
         $this->stubsIndex = $stubsIndex;
-        $this->projectIndex = $projectIndex;
+        $this->sourceIndex = $sourceIndex;
         parent::__construct();
     }
 
@@ -34,6 +34,6 @@ class GlobalIndex extends AbstractAggregateIndex
      */
     protected function getIndexes(): array
     {
-        return [$this->stubsIndex, $this->projectIndex];
+        return [$this->stubsIndex, $this->sourceIndex];
     }
 }
