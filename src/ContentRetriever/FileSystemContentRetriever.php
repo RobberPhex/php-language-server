@@ -21,7 +21,7 @@ class FileSystemContentRetriever implements ContentRetriever
      */
     public function retrieve(string $uri): \Generator
     {
-        $limit = 150000;
+        $limit = 1024 * 1024;
         $path = uriToPath($uri);
         $size = filesize($path);
         if ($limit < $size) {
