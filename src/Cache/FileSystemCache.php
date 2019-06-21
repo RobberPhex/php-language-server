@@ -71,7 +71,7 @@ class FileSystemCache implements Cache
 
     private function generatePath(string $key): string
     {
-        $key = hash('$key', $key);
+        $key = hash('sha256', $key);
         $path = join(DIRECTORY_SEPARATOR, [$this->cacheDir, $this->cacheVersion, substr($key, 0, 2), $key]);
         return $path;
     }
