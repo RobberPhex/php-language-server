@@ -191,7 +191,10 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
             }
             $cache = $capabilities->xcacheProvider ? new ClientCache($this->client) : new FileSystemCache;
 
-            $this->sourceIndex = unserialize(yield from $cache->get($rootPath));
+            $serialized = yield from $cache->get($rootPath);
+            if ($serialized) {
+                $this->sourceIndex = unserialize($serialized);
+            }
             if (!$this->sourceIndex) {
                 $this->sourceIndex = new Index();
             }
