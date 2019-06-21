@@ -448,6 +448,9 @@ class Index extends Emitter implements ReadableIndex, \Serializable
      */
     public function needIndex($file): bool
     {
-        return $this->mtimes[$file->getUri()] && $this->mtimes[$file->getUri()] < $file->getMtime();
+        if (!isset($this->mtimes[$file->getUri()])) {
+            return false;
+        }
+        return $this->mtimes[$file->getUri()] < $file->getMtime();
     }
 }
