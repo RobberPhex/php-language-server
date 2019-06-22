@@ -10,7 +10,6 @@ use Amp\Promise;
 use LanguageServer\{CompletionProvider,
     DefinitionResolver,
     FilesFinder\File,
-    Index\GlobalIndex,
     Index\Index,
     LanguageClient,
     PhpDocument,
@@ -22,18 +21,13 @@ use LanguageServer\Index\ReadableIndex;
 use LanguageServerProtocol\{CompletionContext,
     Hover,
     MarkedString,
-    PackageDescriptor,
     Position,
     ReferenceContext,
-    SymbolDescriptor,
-    SymbolLocationInformation,
     TextDocumentIdentifier,
     TextDocumentItem,
     VersionedTextDocumentIdentifier};
 use Microsoft\PhpParser\Node;
-use function LanguageServer\{getPackageName, isVendored};
 use function League\Uri\parse;
-use Webmozart\Glob\Glob;
 
 /**
  * Provides method handlers for all textDocument/* methods
@@ -118,7 +112,7 @@ class TextDocument
         $deferred = new Deferred();
         Loop::defer(function () use ($textDocument, $deferred) {
             /** @var PhpDocument $document */
-            $document = yield from $this->documentLoader->getOrLoad($textDocument->uri);
+            $document = yield from $this->documentLoader->getOrLoad(new File($textDocument->uri, time()));
 
             $symbols = [];
             foreach ($document->getDefinitions() as $fqn => $definition) {
@@ -333,7 +327,7 @@ class TextDocument
     {
         $deferred = new Deferred();
         Loop::defer(function () use ($deferred, $textDocument, $position) {
-            $document = yield from $this->documentLoader->getOrLoad($textDocument->uri);
+            $document = yield from $this->documentLoader->getOrLoad(new File($textDocument->uri, time()));
             // Find the node under the cursor
             $node = $document->getNodeAtPosition($position);
             if ($node === null) {
