@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace LanguageServer\FilesFinder;
 
+use Amp\Delayed;
 use function Amp\File\isdir;
 use function Amp\File\scandir;
 use Webmozart\Glob\Glob;
@@ -20,16 +21,10 @@ class FileSystemFilesFinder implements FilesFinder
     public function find(string $glob): \Generator
     {
         $files = [];
-        $basePath = Glob::getBasePath($glob);
-        $pathList = [$basePath];
-        while ($pathList) {
-            $path = array_pop($pathList);
-            if (yield isdir($path)) {
-                $subFileList = yield scandir($path);
-                foreach ($subFileList as $subFile) {
-                    $pathList[] = $path . DIRECTORY_SEPARATOR . $subFile;
-                }
-            } elseif (Glob::match($path, $glob)) {
+        $paths = glob($glob);
+        yield new Delayed(0);
+        foreach ($paths as $path) {
+            if (\is_file($path)) {
                 $mtime = stat($path)['mtime'] ?? time();
                 $uri = pathToUri($path);
                 $files[] = new File($uri, $mtime);
