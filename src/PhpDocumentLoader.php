@@ -107,6 +107,7 @@ class PhpDocumentLoader
      */
     public function load(File $file): \Generator
     {
+        $this->documents=[];
         $uri = $file->getUri();
 
         $content = yield from $this->contentRetriever->retrieve($uri);
