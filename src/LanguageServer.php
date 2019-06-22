@@ -321,6 +321,6 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
      */
     protected function beforeIndex(string $rootPath)
     {
-        yield new Delayed(0, null);
+        yield new Delayed(0);
     }
 }
