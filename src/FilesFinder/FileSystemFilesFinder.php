@@ -4,9 +4,7 @@ declare(strict_types=1);
 namespace LanguageServer\FilesFinder;
 
 use Amp\Delayed;
-use function Amp\File\isdir;
-use function Amp\File\scandir;
-use Webmozart\Glob\Glob;
+use Webmozart\Glob\Iterator\GlobIterator;
 use function LanguageServer\{pathToUri};
 
 class FileSystemFilesFinder implements FilesFinder
@@ -21,15 +19,12 @@ class FileSystemFilesFinder implements FilesFinder
     public function find(string $glob): \Generator
     {
         $files = [];
-        $paths = glob($glob);
-        yield new Delayed(0);
-        foreach ($paths as $path) {
-            if (\is_file($path)) {
-                $mtime = stat($path)['mtime'] ?? time();
-                $uri = pathToUri($path);
-                $files[] = new File($uri, $mtime);
-            }
+        foreach (new GlobIterator($glob) as $path) {
+            $mtime = stat($path)['mtime'] ?? time();
+            $uri = pathToUri($path);
+            $files[] = new File($uri, $mtime);
         }
+        yield new Delayed(0);
         return $files;
     }
 }
