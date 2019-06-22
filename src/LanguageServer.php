@@ -236,19 +236,6 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
                         );
                     }
                 }
-
-                // Index in background
-                $indexer = new Indexer(
-                    $this->filesFinder,
-                    $rootPath,
-                    $this->client,
-                    $cache,
-                    $this->sourceIndex,
-                    $this->documentLoader
-                );
-                Loop::defer(function () use ($indexer) {
-                    yield from $indexer->index();
-                });
             }
 
 
@@ -295,6 +282,19 @@ class LanguageServer extends AdvancedJsonRpc\Dispatcher
             $serverCapabilities->xdefinitionProvider = true;
 
             $deferred->resolve(new InitializeResult($serverCapabilities));
+
+            // Index in background
+            $indexer = new Indexer(
+                $this->filesFinder,
+                $rootPath,
+                $this->client,
+                $cache,
+                $this->sourceIndex,
+                $this->documentLoader
+            );
+            Loop::defer(function () use ($indexer) {
+                yield from $indexer->index();
+            });
         });
         return $deferred->promise();
     }
