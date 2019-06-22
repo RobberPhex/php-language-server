@@ -5,6 +5,7 @@ namespace LanguageServer;
 
 use Amp\Loop;
 use InvalidArgumentException;
+use LanguageServer\FilesFinder\File;
 use Throwable;
 use function League\Uri\parse;
 
@@ -91,13 +92,15 @@ function stripStringOverlap(string $a, string $b): string
  * Use for sorting an array of URIs by number of segments
  * in ascending order.
  *
- * @param array $uriList
+ * @param File[] $uriList
  * @return void
  */
 function sortUrisLevelOrder(&$uriList)
 {
     usort($uriList, function ($a, $b) {
-        return substr_count(parse($a)['path'], '/') - substr_count(parse($b)['path'], '/');
+        /** @var $a File */
+        /** @var $b File */
+        return substr_count(parse($a->getUri())['path'], '/') - substr_count(parse($b->getUri())['path'], '/');
     });
 }
 
